@@ -64,7 +64,7 @@ fi
 gh auth status
 if ! gh release list | cut -f3 | grep -qx "$VERSION"; then
   echo "Creating the $VERSION release..."
-  gh release create "$VERSION" release/* -d --target "$CURRENT_COMMIT_ID" -n "Released v$VERSION" --title "v$VERSION"
+  gh release create "$VERSION" release/* -d --target "$CURRENT_COMMIT_ID" -n "Released $VERSION" --title "$VERSION"
 else
   gh release upload "$VERSION" --clobber release/*
 fi
