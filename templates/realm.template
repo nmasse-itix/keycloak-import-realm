@@ -1,0 +1,86 @@
+{
+  "id": "realm_{{ .ID }}",
+  "realm": "realm_{{ .ID }}",
+  "displayName": "realm_{{ .ID }}",
+  "notBefore": 0,
+  "revokeRefreshToken": false,
+  "refreshTokenMaxReuse": 0,
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "offlineSessionIdleTimeout": 2592000,
+  "accessCodeLifespan": 60,
+  "accessCodeLifespanUserAction": 300,
+  "accessCodeLifespanLogin": 1800,
+  "actionTokenGeneratedByAdminLifespan": 43200,
+  "actionTokenGeneratedByUserLifespan": 300,
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "registrationEmailAsUsername": false,
+  "rememberMe": false,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": false,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 30,
+  "users": [
+{{- range $count, $user := .Users }}
+{{- if gt $count 0 }},{{ end }}
+    {
+      "username": "user_{{ $user.ID }}",
+      "firstName": "User",
+      "lastName": "{{ $user.ID }}",
+      "email": "user_{{ $user.ID }}@nowhere.test",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        { 
+          "type": "password",
+          "value": "user_{{ $user.ID }}"
+        }
+      ],
+      "requiredActions": [],
+      "realmRoles": [],
+      "applicationRoles": {}
+    }
+{{- end }}
+  ],
+  "roles": {
+    "realm": [],
+    "client": {}
+  },
+  "defaultRoles": [],
+  "requiredCredentials": [ "password" ],
+  "scopeMappings": [],
+  "clientScopeMappings": {},
+  "clients": [
+{{- range $count, $client := .Clients }}
+{{- if gt $count 0 }},{{ end }}
+    {
+      "clientId": "app_{{ $client.ID }}",
+      "name": "app_{{ $client.ID }}",
+      "enabled": true,
+      "publicClient": false,
+      "redirectUris": [
+        "http://dummy/url"
+      ],
+      "fullScopeAllowed": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "{{ $client.Secret }}"
+    }
+{{- end }}
+  ]
+}
