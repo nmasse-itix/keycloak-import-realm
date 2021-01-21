@@ -21,8 +21,7 @@ package async
 import (
 	"fmt"
 
-	keycloak "github.com/cloudtrust/keycloak-client/v3"
-	"github.com/cloudtrust/keycloak-client/v3/api"
+	keycloak "github.com/nmasse-itix/keycloak-client"
 	kcimport "github.com/nmasse-itix/keycloak-realm-import"
 )
 
@@ -123,7 +122,7 @@ func (r KeycloakResult) String() string {
 }
 
 type Dispatcher struct {
-	Client       *api.Client
+	Client       *keycloak.Client
 	Workers      []Worker
 	Importer     kcimport.KeycloakImporter
 	clients      chan KeycloakClientCreationRequest

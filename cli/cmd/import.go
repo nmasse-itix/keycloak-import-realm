@@ -24,7 +24,7 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/cloudtrust/keycloak-client/v3"
+	keycloak "github.com/nmasse-itix/keycloak-client"
 	kcimport "github.com/nmasse-itix/keycloak-realm-import"
 	"github.com/nmasse-itix/keycloak-realm-import/async"
 	"github.com/spf13/cobra"

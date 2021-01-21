@@ -21,9 +21,7 @@ package kcimport
 import (
 	"fmt"
 
-	commonhttp "github.com/cloudtrust/common-service/errors"
-	keycloak "github.com/cloudtrust/keycloak-client/v3"
-	"github.com/cloudtrust/keycloak-client/v3/api"
+	keycloak "github.com/nmasse-itix/keycloak-client"
 )
 
 type KeycloakCredentials struct {
@@ -33,7 +31,7 @@ type KeycloakCredentials struct {
 }
 
 type KeycloakImporter struct {
-	Client      *api.Client
+	Client      *keycloak.Client
 	Token       string
 	Credentials KeycloakCredentials
 }
@@ -50,7 +48,7 @@ func (e *ImportError) Error() string {
 func NewKeycloakImporter(config keycloak.Config) (KeycloakImporter, error) {
 	var importer KeycloakImporter
 
-	kcClient, err := api.New(config)
+	kcClient, err := keycloak.NewClient(config)
 	if err != nil {
 		return importer, err
 	}
@@ -162,11 +160,7 @@ func (importer *KeycloakImporter) ApplyUser(realmName string, user keycloak.User
 }
 
 func normalizeError(err error) *ImportError {
-	if e, ok := err.(commonhttp.Error); ok {
-		return &ImportError{StatusCode: e.Status, Message: e.Message}
-	} else if e, ok := err.(keycloak.HTTPError); ok {
-		return &ImportError{StatusCode: e.HTTPStatus, Message: e.Message}
-	} else if e, ok := err.(keycloak.ClientDetailedError); ok {
+	if e, ok := err.(keycloak.HTTPError); ok {
 		return &ImportError{StatusCode: e.HTTPStatus, Message: e.Message}
 	}
 	return &ImportError{Message: err.Error()}
