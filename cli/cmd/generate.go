@@ -20,15 +20,17 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
+	"text/template"
 
 	kcimport "github.com/nmasse-itix/keycloak-realm-import"
 	"github.com/spf13/cobra"
 )
 
 var realmCount, clientCount, userCount int
-var targetDir string
+var targetDir, customTemplateFile string
 
 // generateCmd represents the generate command
 var generateCmd = &cobra.Command{
@@ -40,14 +42,32 @@ var generateCmd = &cobra.Command{
 		if err != nil {
 			logger.Fatal(err)
 		}
+
+		var customTemplate *template.Template
+		if customTemplateFile != "" {
+			b, err := ioutil.ReadFile(customTemplateFile)
+			if err != nil {
+				logger.Fatal(err)
+			}
+
+			content := string(b)
+			customTemplate, err = kcimport.GetRealmTemplate(content)
+		}
 		realms := kcimport.GenerateRealms(realmCount, clientCount, userCount)
+
 		for _, realm := range realms {
 			f, err := os.OpenFile(path.Join(targetDir, fmt.Sprintf("realm-%s.json", realm.ID)), os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0666)
 			if err != nil {
 				logger.Fatal(err)
 			}
 			defer f.Close()
-			err = kcimport.WriteRealmFile(realm, f)
+
+			if customTemplate != nil {
+				err = kcimport.WriteRealmFileWithTemplate(realm, f, customTemplate)
+			} else {
+				err = kcimport.WriteRealmFile(realm, f)
+			}
+
 			if err != nil {
 				logger.Fatal(err)
 			}
@@ -61,4 +81,5 @@ func init() {
 	generateCmd.Flags().IntVar(&clientCount, "clients", 10, "number of clients to generate per realm")
 	generateCmd.Flags().IntVar(&userCount, "users", 10, "number of users to generate per realm")
 	generateCmd.Flags().StringVar(&targetDir, "target", ".", "target directory")
+	generateCmd.Flags().StringVar(&customTemplateFile, "template", "", "go template used to generate the realm")
 }

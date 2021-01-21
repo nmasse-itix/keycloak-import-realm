@@ -57,7 +57,7 @@ func init() {
 		fmt.Printf("init: %s\n", err)
 	}
 
-	defaultTemplate, err = getTemplate(statikFS, "/realm.template", "realm")
+	defaultTemplate, err = getTemplate(statikFS, "/realm.template")
 	if err != nil {
 		fmt.Printf("init: %s\n", err)
 	}
@@ -100,31 +100,25 @@ func WriteRealmFile(realm GeneratedRealm, out io.Writer) error {
 	return WriteRealmFileWithTemplate(realm, out, defaultTemplate)
 }
 
-func getTemplate(statikFS http.FileSystem, filename string, name string) (*template.Template, error) {
-	tmpl := template.New(name)
-	content, err := slurpFile(statikFS, filename)
-	if err != nil {
-		return nil, err
-	}
-
+func GetRealmTemplate(content string) (*template.Template, error) {
+	tmpl := template.New("realm")
 	customFunctions := template.FuncMap{
 		// TODO
 	}
-
 	return tmpl.Funcs(customFunctions).Parse(content)
 }
 
-func slurpFile(statikFS http.FileSystem, filename string) (string, error) {
+func getTemplate(statikFS http.FileSystem, filename string) (*template.Template, error) {
 	fd, err := statikFS.Open(filename)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer fd.Close()
 
 	content, err := ioutil.ReadAll(fd)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(content), nil
+	return GetRealmTemplate(string(content))
 }
