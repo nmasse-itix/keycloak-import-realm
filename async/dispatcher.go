@@ -202,11 +202,21 @@ func (dispatcher *Dispatcher) NewToken(token string) {
 	dispatcher.newToken <- token
 }
 
+func (dispatcher *Dispatcher) consumeNewToken() {
+	select {
+	case newToken := <-dispatcher.newToken:
+		dispatcher.Importer.Token = newToken
+	default:
+	}
+}
+
 func (dispatcher *Dispatcher) ApplyClient(realmName string, client keycloak.ClientRepresentation) {
+	dispatcher.consumeNewToken()
 	dispatcher.clients <- KeycloakClientCreationRequest{realmName, client}
 }
 
 func (dispatcher *Dispatcher) ApplyUser(realmName string, user keycloak.UserRepresentation) {
+	dispatcher.consumeNewToken()
 	dispatcher.users <- KeycloakUserCreationRequest{realmName, user}
 }
 
