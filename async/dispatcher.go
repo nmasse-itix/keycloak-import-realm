@@ -129,24 +129,31 @@ type Dispatcher struct {
 	users        chan KeycloakUserCreationRequest
 	Results      chan KeycloakResult
 	tokenRenewer TokenRenewer
+	expiredToken chan struct{}
+	newToken     chan string
 }
 
 func NewDispatcher(workers int, config keycloak.Config, credentials kcimport.KeycloakCredentials) (Dispatcher, error) {
 	var dispatcher Dispatcher
+	var err error
 
-	importer, err := kcimport.NewKeycloakImporter(config)
+	dispatcher.tokenRenewer, err = NewTokenRenewer(config)
 	if err != nil {
-		return dispatcher, err
+		return Dispatcher{}, err
+	}
+	dispatcher.tokenRenewer.Importer.Credentials = credentials
+	err = dispatcher.tokenRenewer.Importer.Login()
+	if err != nil {
+		return Dispatcher{}, err
 	}
 
-	importer.Credentials = credentials
-	err = importer.Login()
+	dispatcher.Importer, err = kcimport.NewKeycloakImporter(config)
 	if err != nil {
-		return dispatcher, err
+		return Dispatcher{}, err
 	}
-
-	dispatcher.tokenRenewer = NewTokenRenewer()
-	dispatcher.Importer = importer
+	dispatcher.Importer.Token = dispatcher.tokenRenewer.Importer.Token
+	dispatcher.expiredToken = dispatcher.tokenRenewer.expiredToken
+	dispatcher.newToken = make(chan string, 1)
 	dispatcher.clients = make(chan KeycloakClientCreationRequest)
 	dispatcher.users = make(chan KeycloakUserCreationRequest)
 	dispatcher.Results = make(chan KeycloakResult)
@@ -155,11 +162,11 @@ func NewDispatcher(workers int, config keycloak.Config, credentials kcimport.Key
 	for i := 0; i < workers; i++ {
 		dispatcher.Workers[i] = NewWorker(fmt.Sprintf("worker-%03d", i), dispatcher.clients, dispatcher.users, dispatcher.Results, dispatcher.tokenRenewer.expiredToken)
 
-		importer, err = kcimport.NewKeycloakImporter(config)
+		importer, err := kcimport.NewKeycloakImporter(config)
 		if err != nil {
-			return dispatcher, err
+			return Dispatcher{}, err
 		}
-		importer.Token = dispatcher.Importer.Token
+		importer.Token = dispatcher.tokenRenewer.Importer.Token
 
 		dispatcher.Workers[i].Importer = importer
 	}
@@ -169,15 +176,30 @@ func NewDispatcher(workers int, config keycloak.Config, credentials kcimport.Key
 
 func (dispatcher *Dispatcher) ApplyRealm(realm keycloak.RealmRepresentation) {
 	var err error
-
-	for i := 0; i < 3; i++ {
+	var retries int
+	for retries = 0; retries < 3; retries++ {
 		err = dispatcher.Importer.ApplyRealm(realm)
-		if err != nil {
-			continue
+		if err == nil {
+			break
+		}
+
+		if e, ok := err.(*kcimport.ImportError); ok {
+			if e.StatusCode == 401 {
+				dispatcher.expiredToken <- struct{}{}
+				select {
+				case newToken := <-dispatcher.newToken:
+					dispatcher.Importer.Token = newToken
+					continue
+				}
+			}
 		}
 	}
 
 	dispatcher.Results <- NewKeycloakResult("dispatcher", KeycloakRealm, realm.ID, nil, err, 0)
+}
+
+func (dispatcher *Dispatcher) NewToken(token string) {
+	dispatcher.newToken <- token
 }
 
 func (dispatcher *Dispatcher) ApplyClient(realmName string, client keycloak.ClientRepresentation) {

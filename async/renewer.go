@@ -21,6 +21,9 @@ package async
 import (
 	"fmt"
 	"time"
+
+	keycloak "github.com/nmasse-itix/keycloak-client"
+	kcimport "github.com/nmasse-itix/keycloak-realm-import"
 )
 
 func (tr *TokenRenewer) RenewToken(dispatcher *Dispatcher) {
@@ -33,7 +36,7 @@ func (tr *TokenRenewer) RenewToken(dispatcher *Dispatcher) {
 				continue
 			}
 
-			err := dispatcher.Importer.Login()
+			err := tr.Importer.Login()
 			if err != nil {
 				fmt.Printf("dispatcher: Cannot renew OIDC token: %s\n", err)
 				continue
@@ -41,8 +44,9 @@ func (tr *TokenRenewer) RenewToken(dispatcher *Dispatcher) {
 
 			tr.LastTokenRenew = time.Now()
 			for i := 0; i < len(dispatcher.Workers); i++ {
-				dispatcher.Workers[i].NewToken(dispatcher.Importer.Token)
+				dispatcher.Workers[i].NewToken(tr.Importer.Token)
 			}
+			dispatcher.NewToken(tr.Importer.Token)
 		}
 	}
 }
@@ -54,13 +58,21 @@ func (tr *TokenRenewer) Stop() {
 type TokenRenewer struct {
 	quit           chan struct{}
 	expiredToken   chan struct{}
+	Importer       kcimport.KeycloakImporter
 	LastTokenRenew time.Time
 }
 
-func NewTokenRenewer() TokenRenewer {
+func NewTokenRenewer(config keycloak.Config) (TokenRenewer, error) {
 	var tokenRenewer TokenRenewer
 	tokenRenewer.LastTokenRenew = time.Now()
 	tokenRenewer.expiredToken = make(chan struct{})
 	tokenRenewer.quit = make(chan struct{})
-	return tokenRenewer
+
+	var err error
+	tokenRenewer.Importer, err = kcimport.NewKeycloakImporter(config)
+	if err != nil {
+		return TokenRenewer{}, err
+	}
+
+	return tokenRenewer, nil
 }
