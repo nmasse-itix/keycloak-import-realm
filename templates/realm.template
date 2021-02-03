@@ -59,7 +59,9 @@
     "realm": [],
     "client": {}
   },
-  "defaultRoles": [],
+  "defaultRoles": [
+    "offline_access"
+  ],
   "requiredCredentials": [ "password" ],
   "scopeMappings": [],
   "clientScopeMappings": {},
