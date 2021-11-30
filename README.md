@@ -48,3 +48,18 @@ You can change this with:
 ```sh
 kci config set workers --value 10
 ```
+
+## Container image
+
+An up-to-date container image is built by a Tekton pipeline and pushed to [quay.io/itix/kci](https://quay.io/repository/itix/kci?tab=tags).
+Images are built for x86_64, armv5 and arm64.
+Each tag in the git repository ends up being a tag in the Quay registry, `latest` being the continuous build of the `main` branch.
+
+To use this tool from the command line with podman, you would need to define the following function in your .bashrc / .zshrc.
+
+```sh
+function kci () {
+    touch ~/.kci.yaml
+    podman run --rm -v $HOME/.kci.yaml:/.kci.yaml:z -v $PWD:/home:z -w /home quay.io/itix/kci:latest "$@"
+}
+```
