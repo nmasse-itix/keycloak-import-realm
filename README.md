@@ -63,3 +63,16 @@ function kci () {
     podman run --rm -v $HOME/.kci.yaml:/.kci.yaml:z -v $PWD:/home:z -w /home quay.io/itix/kci:latest "$@"
 }
 ```
+
+## Building from sources
+
+To compile the application from sources, you can run the following commands:
+
+```sh
+export GOPATH="$HOME/go"
+export GOBIN="$GOPATH/bin"
+export PATH="$GOBIN:$PATH"
+go install github.com/rakyll/statik
+go generate ./...
+go build -o kci cli/main.go
+```
